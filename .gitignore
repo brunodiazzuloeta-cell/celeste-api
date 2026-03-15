@@ -1,0 +1,29 @@
+# Entorno virtual
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Dependencias (aunque ya tienes requirements.txt)
+*.egg-info/
+dist/
+build/
+
+# IDE (VSCode, etc.)
+.vscode/
+.idea/
+
+# Ignorar carpetas personales del sistema (por si acaso)
+.antigravity/
+.gemini/
+.cline/
+.cache/
+
+# Otros
+*.log
