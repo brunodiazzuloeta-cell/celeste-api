@@ -1,8 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
-import ollama
 import requests
 import os
 from dotenv import load_dotenv
@@ -16,7 +15,7 @@ app = FastAPI(title="Celeste API")
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción restringe a tu dominio
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,36 +44,32 @@ def read_root():
 
 @app.post("/chat", response_model=Response)
 async def chat(message: Message):
-    # 1. Guardar mensaje del usuario en Supabase
-    msg_id = str(uuid.uuid4())
-    timestamp = time.time()
-    
-    supabase.table("messages").insert({
-        "id": msg_id,
-        "user_id": message.user_id,
-        "content": message.content,
-        "role": "user",
-        "timestamp": timestamp
-    }).execute()
-
-    # 2. Obtener historial reciente del usuario (para contexto)
-    history = supabase.table("messages") \
-        .select("content, role") \
-        .eq("user_id", message.user_id) \
-        .order("timestamp", desc=True) \
-        .limit(10) \
-        .execute()
-
-    # 3. Construir contexto
-    context = "\n".join([
-        f"{msg['role']}: {msg['content']}" 
-        for msg in reversed(history.data)
-    ])
-
-   # 4. Llamar a Ollama a través del túnel de Cloudflare
-    async def chat(message: Message):
     try:
-        # ... código anterior (guardar mensaje, obtener historial, etc.)
+        # 1. Guardar mensaje del usuario en Supabase
+        msg_id = str(uuid.uuid4())
+        timestamp = time.time()
+        
+        supabase.table("messages").insert({
+            "id": msg_id,
+            "user_id": message.user_id,
+            "content": message.content,
+            "role": "user",
+            "timestamp": timestamp
+        }).execute()
+
+        # 2. Obtener historial reciente del usuario (para contexto)
+        history = supabase.table("messages") \
+            .select("content, role") \
+            .eq("user_id", message.user_id) \
+            .order("timestamp", desc=True) \
+            .limit(10) \
+            .execute()
+
+        # 3. Construir contexto
+        context = "\n".join([
+            f"{msg['role']}: {msg['content']}" 
+            for msg in reversed(history.data)
+        ])
 
         # 4. Llamar a Ollama a través del túnel de Cloudflare
         ollama_tunnel_url = os.getenv("OLLAMA_TUNNEL_URL")
@@ -105,25 +100,24 @@ async def chat(message: Message):
             print(f"Error conectando con Ollama: {e}")
             raise HTTPException(status_code=503, detail="No se pudo contactar con el modelo de IA local.")
 
-        # ... resto del código (guardar respuesta, devolver)
-    except Exception as e:
-        # ... manejo de errores
-        
-    # 5. Guardar respuesta en Supabase
-    supabase.table("messages").insert({
-        "id": str(uuid.uuid4()),
-        "user_id": message.user_id,
-        "content": response['message']['content'],
-        "role": "assistant",
-        "timestamp": time.time()
-    }).execute()
+        # 5. Guardar respuesta en Supabase
+        supabase.table("messages").insert({
+            "id": str(uuid.uuid4()),
+            "user_id": message.user_id,
+            "content": respuesta_texto,
+            "role": "assistant",
+            "timestamp": time.time()
+        }).execute()
 
-    # 6. Devolver respuesta
-    return Response(
-        message_id=msg_id,
-        response=response['message']['content'],
-        timestamp=timestamp
-    )
+        # 6. Devolver respuesta
+        return Response(
+            message_id=msg_id,
+            response=respuesta_texto,
+            timestamp=timestamp
+        )
+    except Exception as e:
+        print(f"Error general: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/history/{user_id}")
 async def get_history(user_id: str, limit: int = 50):
