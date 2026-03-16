@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from supabase import create_client, Client
@@ -73,9 +73,9 @@ async def chat(message: Message):
 
         # 4. Llamar a Ollama a través del túnel de Cloudflare
         ollama_tunnel_url = os.getenv("OLLAMA_TUNNEL_URL")
-              print(f"DEBUG: OLLAMA_TUNNEL_URL = {ollama_tunnel_url}")  # Esto aparecerá en los logs
-              if not ollama_tunnel_url:
-                  raise HTTPException(status_code=500, detail="OLLAMA_TUNNEL_URL no configurada")
+        print(f"DEBUG: OLLAMA_TUNNEL_URL = {ollama_tunnel_url}")  # Aparecerá en los logs
+        if not ollama_tunnel_url:
+            raise HTTPException(status_code=500, detail="OLLAMA_TUNNEL_URL no configurada")
 
         payload = {
             "model": "llama3.2:1b",
