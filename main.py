@@ -71,8 +71,15 @@ async def chat(message: Message):
         for msg in reversed(history.data)
     ])
 
-            # 4. Llamar a Ollama a través del túnel de Cloudflare
-        OLLAMA_TUNNEL_URL = "https://porcelain-languages-systematic-asks.trycloudflare.com"
+   # 4. Llamar a Ollama a través del túnel de Cloudflare
+    async def chat(message: Message):
+    try:
+        # ... código anterior (guardar mensaje, obtener historial, etc.)
+
+        # 4. Llamar a Ollama a través del túnel de Cloudflare
+        ollama_tunnel_url = os.getenv("OLLAMA_TUNNEL_URL")
+        if not ollama_tunnel_url:
+            raise HTTPException(status_code=500, detail="OLLAMA_TUNNEL_URL no configurada")
 
         payload = {
             "model": "llama3.2:1b",
@@ -90,7 +97,7 @@ async def chat(message: Message):
         }
 
         try:
-            response_ollama = requests.post(f"{OLLAMA_TUNNEL_URL}/api/chat", json=payload)
+            response_ollama = requests.post(f"{ollama_tunnel_url}/api/chat", json=payload)
             response_ollama.raise_for_status()
             ollama_response_data = response_ollama.json()
             respuesta_texto = ollama_response_data['message']['content']
@@ -98,6 +105,10 @@ async def chat(message: Message):
             print(f"Error conectando con Ollama: {e}")
             raise HTTPException(status_code=503, detail="No se pudo contactar con el modelo de IA local.")
 
+        # ... resto del código (guardar respuesta, devolver)
+    except Exception as e:
+        # ... manejo de errores
+        
     # 5. Guardar respuesta en Supabase
     supabase.table("messages").insert({
         "id": str(uuid.uuid4()),
